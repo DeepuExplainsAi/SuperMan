@@ -6,6 +6,9 @@ on:
     tags: ['v*']
 permissions:
   contents: read
+concurrency:
+  group: desktop-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-24.04
@@ -55,7 +58,7 @@ jobs:
           npm_config_arch: ia32
           npm_config_build_from_source: 'true'
       - if: matrix.platform == 'linux'
-        run: sudo apt-get update && sudo apt-get install -y rpm
+        run: sudo apt-get update && sudo apt-get install -y rpm xvfb
       - run: npm run desktop:build
         env:
           OPENMAN_LOCAL_MODE: '1'
@@ -63,7 +66,11 @@ jobs:
         run: node scripts/ci-command.mjs npx electron-builder --config electron-builder.yml --${{ matrix.platform }} ${{ matrix.targets }} --${{ matrix.arch }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - name: Packaged runtime regression checks
+      - name: Packaged runtime and GUI checks (Linux)
+        if: matrix.platform == 'linux'
+        run: node scripts/ci-command.mjs xvfb-run -a node scripts/packaged-runtime-smoke.mjs --arch ${{ matrix.arch }}
+      - name: Packaged runtime and GUI checks (Windows/macOS)
+        if: matrix.platform != 'linux'
         run: node scripts/ci-command.mjs node scripts/packaged-runtime-smoke.mjs --arch ${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
         if: always() && steps.package.outcome == 'success'

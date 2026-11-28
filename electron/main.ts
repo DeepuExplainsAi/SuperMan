@@ -2,9 +2,16 @@ import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { app, desktopCapturer, BrowserWindow, screen, Menu, Tray, nativeImage, shell, ipcMain, session, dialog } from "electron";
 import { spawn, type ChildProcess } from "node:child_process";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { mkdirSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
 import { brand } from "../src/config/brand";
+
+// Respect the same explicit data override as the backend (also isolates packaged-app acceptance tests).
+if (process.env.OPENMAN_APP_DATA) {
+  const data = resolve(process.env.OPENMAN_APP_DATA);
+  mkdirSync(data, { recursive: true });
+  app.setPath("userData", data);
+}
 
 let window: BrowserWindow | null = null;
 let tray: Tray;
