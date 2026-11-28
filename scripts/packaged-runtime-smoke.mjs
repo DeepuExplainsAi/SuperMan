@@ -51,6 +51,14 @@ run(executable, ['-e', `
   terminal.onExit(({exitCode})=>{clearTimeout(timeout);process.exit(exitCode===0&&output.includes('PACKAGED_PTY_OK')?0:1)});
 `]);
 console.log('PASS packaged native PTY load and execution');
+if (process.platform === 'darwin') {
+  run(executable, ['-e', `
+    const sharp=require('node:module').createRequire(${JSON.stringify(join(serverRoot, 'package.json'))})('sharp');
+    sharp({create:{width:1,height:1,channels:4,background:'#112233'}}).png().toBuffer()
+      .then(buffer=>{if(!buffer.length)process.exit(1)}).catch(error=>{console.error(error);process.exit(1)});
+  `]);
+  console.log('PASS packaged macOS sharp/libvips native image processing');
+}
 run(process.execPath, ['scripts/local-production-smoke.mjs', '--executable', executable, '--server-root', serverRoot], { env: { ...process.env, OPENMAN_SMOKE_DEFAULT: '0' } });
 run(process.execPath, ['scripts/local-production-smoke.mjs', '--executable', executable, '--server-root', serverRoot], { env: { ...process.env, OPENMAN_SMOKE_DEFAULT: '1' } });
 

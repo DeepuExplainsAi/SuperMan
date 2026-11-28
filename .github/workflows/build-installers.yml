@@ -24,7 +24,7 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       - run: npm audit --audit-level=high
       - run: npm run typecheck && npm run lint -- --max-warnings 0
-      - run: node scripts/safe-fetch-test.mjs && node src/lib/observability/redact.test.mjs && node scripts/local-mode-test.mjs && node scripts/standalone-links-test.mjs
+      - run: node scripts/safe-fetch-test.mjs && node src/lib/observability/redact.test.mjs && node scripts/local-mode-test.mjs && node scripts/standalone-links-test.mjs && node scripts/desktop-after-pack-test.mjs
       - run: npm run desktop:build && node scripts/local-production-smoke.mjs
         env:
           OPENMAN_LOCAL_MODE: '1'
@@ -112,4 +112,4 @@ jobs:
       - name: Extract the produced universal ZIP
         run: mkdir -p release/mac-universal && ditto -x -k release/*-universal.zip release/mac-universal
       - name: Verify the universal app on Apple Silicon as well as its Intel builder
-        run: node scripts/ci-command.mjs node scripts/packaged-runtime-smoke.mjs --arch universal
+        run: node scripts/ci-command.mjs node scripts/packaged-runtime-smoke.mjs --arch arm64

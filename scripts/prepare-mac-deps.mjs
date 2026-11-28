@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { access, cp, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { access, chmod, cp, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
 /** Universal server resources need both sharp prebuilds, not just the builder host's optional packages. */
@@ -27,7 +27,8 @@ export async function prepareMacDependencies(standalone) {
         assert.equal(installed.version, version);
       }
       await access(join(standalone, 'node_modules/node-pty/prebuilds', `darwin-${arch}`, 'pty.node'));
-      await access(join(standalone, 'node_modules/node-pty/prebuilds', `darwin-${arch}`, 'spawn-helper'));
+      // npm's published prebuild helpers are mode 0644; posix_spawnp requires execute permission.
+      await chmod(join(standalone, 'node_modules/node-pty/prebuilds', `darwin-${arch}`, 'spawn-helper'), 0o755);
     }
   } finally { await rm(temporary, { recursive: true, force: true }); }
 }
