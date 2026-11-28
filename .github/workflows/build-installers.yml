@@ -28,8 +28,9 @@ jobs:
         env:
           OPENMAN_SMOKE_DEFAULT: '1'
   installers:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     needs: verify
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
