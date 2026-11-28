@@ -59,6 +59,8 @@ mac:
   entitlements: electron/entitlements.mac.plist
   entitlementsInherit: electron/entitlements.mac.plist
   mergeASARs: true
+  # These vendors select explicitly architecture-named prebuilds at runtime; both variants are shipped.
+  x64ArchFiles: 'Contents/Resources/server/**/{@img,node-pty}/**'
   target:
     - target: dmg
       arch: [universal]

@@ -90,3 +90,26 @@ jobs:
             release/*.zip
           if-no-files-found: error
           retention-days: 14
+  mac-arm64-acceptance:
+    needs: installers
+    if: always() && !cancelled() && needs.installers.result != 'skipped'
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: npx tsc -p electron/tsconfig.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: installers-mac-universal
+          path: release
+      - name: Extract the produced universal ZIP
+        run: mkdir -p release/mac-universal && ditto -x -k release/*-universal.zip release/mac-universal
+      - name: Verify the universal app on Apple Silicon as well as its Intel builder
+        run: node scripts/ci-command.mjs node scripts/packaged-runtime-smoke.mjs --arch universal

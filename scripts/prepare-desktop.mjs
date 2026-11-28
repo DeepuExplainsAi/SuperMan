@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import sharp from 'sharp';
 import { materializeExternalAliases } from './standalone-links.mjs';
+import { prepareMacDependencies } from './prepare-mac-deps.mjs';
 await mkdir('public/brand', { recursive: true });
 const png = await sharp('public/brand/logo-mark.svg').resize(512, 512).png().toBuffer();
 await writeFile('public/brand/icon.png', png);
@@ -24,6 +25,7 @@ await cp('node_modules/node-pty', '.next/standalone/node_modules/node-pty', { re
 
 // Playwright dynamically reads browsers.json and bundled helpers even with a system browser.
 await cp("node_modules/playwright-core", ".next/standalone/node_modules/playwright-core", { recursive: true });
+if (process.platform === 'darwin') await prepareMacDependencies('.next/standalone');
 await materializeExternalAliases('.next/standalone');
 
 // The Electron main process uses only built-ins; server dependencies belong in extraResources, not app.asar.

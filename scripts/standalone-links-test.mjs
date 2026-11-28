@@ -23,6 +23,11 @@ try {
   const { load } = require('js-yaml');
   const { getFileMatchers, copyFiles } = require('app-builder-lib/out/fileMatcher');
   const config = load(await readFile('electron-builder.yml', 'utf8'));
+  const { minimatch } = createRequire(require.resolve('@electron/universal'))('minimatch');
+  for (const file of ['@img/sharp-darwin-arm64/lib/sharp-darwin-arm64.node', 'node-pty/prebuilds/darwin-x64/pty.node']) {
+    assert(minimatch('Contents/Resources/server/node_modules/' + file, config.mac.x64ArchFiles));
+  }
+  assert(!minimatch('Contents/MacOS/Main', config.mac.x64ArchFiles), 'Do not exempt the main executable from universal merging');
   await mkdir(join(root, 'public'));
   await writeFile(join(root, 'public', 'asset.txt'), 'public asset');
   const destination = join(root, 'release', 'resources');
