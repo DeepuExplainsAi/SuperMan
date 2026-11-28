@@ -1,7 +1,7 @@
 {
   "name": "openman",
   "version": "0.2.0",
-  "description": "OpenMan: a 100% local, auto-starting desktop AI agent that runs entirely on your laptop \u2014 no cloud, no accounts.",
+  "description": "OpenMan: a 100% local, auto-starting desktop AI agent that runs entirely on your laptop — no cloud, no accounts.",
   "private": true,
   "scripts": {
     "dev": "cross-env OPENMAN_LOCAL_MODE=1 next dev -H 127.0.0.1",
@@ -59,7 +59,7 @@
     "@types/react-dom": "^19",
     "@types/ws": "^8.5.12",
     "cross-env": "^7.0.3",
-    "electron": "^37.0.0",
+    "electron": "42.11.18",
     "electron-builder": "^26.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",

@@ -22,6 +22,7 @@ jobs:
       - run: npm ci
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: npm audit --audit-level=high
       - run: npm run typecheck && npm run lint -- --max-warnings 0
       - run: node scripts/safe-fetch-test.mjs && node src/lib/observability/redact.test.mjs && node scripts/local-mode-test.mjs && node scripts/standalone-links-test.mjs
       - run: npm run desktop:build && node scripts/local-production-smoke.mjs
@@ -52,6 +53,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       - if: matrix.arch == 'ia32'
         run: npm rebuild node-pty
         env:

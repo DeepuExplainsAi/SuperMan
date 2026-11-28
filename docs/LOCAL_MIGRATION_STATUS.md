@@ -43,7 +43,7 @@ Checkpoint: 2026-11-27. This is an implementation/verification record, not a dec
 - GitHub/official skill import against live repositories, vendor OAuth, email/phone/media integrations and every inherited public API workflow.
 - Website cron execution, AI provider calls, browser screenshots and restart recovery across a real desktop reboot. Website runtime wiring and relevant file/state paths are implemented.
 
-## Installer blocker
+## Installer verification
 
 The native-platform matrix and target configurations exist for Windows NSIS/MSI/portable (x64/arm64/ia32), Linux AppImage/deb/rpm (x64/arm64), and macOS dmg/pkg/zip (universal). Config validation is not an installer test.
 
@@ -53,7 +53,22 @@ A Linux x64 unpacked packaging attempt using:
 npx electron-builder --config electron-builder.yml --linux --dir --x64 --publish never
 ```
 
-failed while acquiring Electron with `unable to verify the first certificate`. Direct Electron installation hit the same certificate failure. Retrying with `NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt` instead failed with `Client network socket disconnected before secure TLS connection was established`. TLS verification was not disabled. No installer or runnable Electron bundle was produced in this workspace. Windows/macOS builds cannot be validated on this Linux host; no release workflow was dispatched and nothing was pushed or published.
+failed while acquiring Electron with `unable to verify the first certificate`. Direct Electron installation hit the same certificate failure. Retrying with `NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt` instead failed with `Client network socket disconnected before secure TLS connection was established`. TLS verification was not disabled. No installer or runnable Electron bundle was produced in this local workspace during that attempt.
+
+### Native CI follow-up
+
+PR #1 now runs verification and the native installer matrix for same-repository pull requests (fork PRs run verification only). Manual workflow dispatch was refused by the connected GitHub integration with HTTP 403, so these builds run through PR events. Artifacts are retained in GitHub Actions for 14 days; they are not a signed/notarized public release.
+
+- The initial matrix built Linux artifacts, but subsequent packaged-runtime checks exposed missing root server dependencies: electron-builder excludes a source root's node_modules unless it is explicitly mapped. The configuration now maps server/node_modules separately. A regression test exercises the builder's real copy filters and verifies copied dependencies.
+- Windows MSI initially failed on Next's directory aliases. Preparation now materializes those aliases, with traversal/idempotency regression tests.
+- Matrix commands now specify target formats explicitly, so a per-architecture job cannot silently build every architecture from the default configuration.
+- The unsupported macos-14 runner label was replaced by macos-15-intel. Electron metadata is staged separately from the Next development dependency tree.
+- `scripts/packaged-runtime-smoke.mjs` tests the actual packaged Electron runtime, native PTY loading/execution, forced/default-local production boot, and GUI lifecycle with Playwright. GUI checks cover owner session, preload isolation, first-launch autostart and its toggle, close-to-tray/reopen, and backend shutdown. They use isolated data; Linux GUI automation uses Xvfb with a test-only --no-sandbox argument. Shipping BrowserWindow isolation/sandbox settings remain enabled.
+- These new native checks must pass before the artifacts are described as verified. They do not automate installer wizards, reboot/login, OS permission dialogs, signing/notarization, real models or live external integrations.
+
+- A full dependency audit identified high-severity advisories in the original Electron 37 runtime. Electron is now pinned to 42.11.18, whose release assets include every required architecture (including Windows ia32). The updated lockfile audit reports zero high/critical findings and six moderate build-tool findings. Production dependencies alone report zero findings. CI gates on high-severity findings; a clean audit is not a guarantee against all vulnerabilities.
+
+Follow the latest matrix through [PR #1 checks](https://github.com/DeepuExplainsAi/SuperMan/pull/1/checks). Corrected native acceptance checks were still pending when this follow-up entry was prepared. Earlier artifacts are superseded test builds, not proof of working packages.
 
 ## Remaining acceptance work
 

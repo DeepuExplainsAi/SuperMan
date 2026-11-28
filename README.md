@@ -89,7 +89,7 @@ npm run dist:all    # Dispatch the pushed GitHub Actions workflow using authenti
 
 Use native OS/architecture builders for native dependencies. Windows ia32 native modules need an x86 toolchain; macOS universal packaging needs both architectures. No Electron binary is included in source control. Signing/notarization requires your distribution certificates; the workflow does not invent credentials or claim signed artifacts. Unsigned packages can trigger OS warnings.
 
-`electron-builder.yml` contains icons, entitlements, wizard options and target definitions. `.github/workflows/build-installers.yml` verifies tests/build, then runs the platform matrix and uploads artifacts (14-day retention). Trigger it manually or push a version tag. `dist:all` requires the workflow to exist on the pushed current branch. This workspace has not produced or installed those packages; inspect every matrix job and perform native acceptance tests before publishing a release.
+`electron-builder.yml` contains icons, entitlements, wizard options and target definitions. `.github/workflows/build-installers.yml` verifies tests/build, then runs the platform matrix and uploads artifacts (14-day retention). Same-repository PRs also run the installer matrix; fork PRs run verification only. Manual runs and version tags remain supported. Packaged-runtime checks exercise the shipped Electron binary, native PTY, backend and GUI lifecycle on each builder, rather than assuming a successful archive build proves the app works. `dist:all` requires the workflow to exist on the pushed current branch. This workspace has not produced or installed those packages; inspect every matrix job and perform native acceptance tests before publishing a release.
 
 ## Verification
 
