@@ -1,0 +1,115 @@
+name: Build desktop installers
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: desktop-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: npm audit --audit-level=high
+      - run: npm run typecheck && npm run lint -- --max-warnings 0
+      - run: node scripts/safe-fetch-test.mjs && node src/lib/observability/redact.test.mjs && node scripts/local-mode-test.mjs && node scripts/standalone-links-test.mjs && node scripts/desktop-after-pack-test.mjs
+      - run: npm run desktop:build && node scripts/local-production-smoke.mjs
+        env:
+          OPENMAN_LOCAL_MODE: '1'
+      - run: node scripts/local-production-smoke.mjs
+        env:
+          OPENMAN_SMOKE_DEFAULT: '1'
+  installers:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    needs: verify
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-2022, platform: win, arch: x64, targets: 'nsis msi portable' }
+          - { os: windows-11-arm, platform: win, arch: arm64, targets: 'nsis msi portable' }
+          - { os: windows-2022, platform: win, arch: ia32, targets: 'nsis msi portable' }
+          - { os: ubuntu-24.04, platform: linux, arch: x64, targets: 'AppImage deb rpm' }
+          - { os: ubuntu-24.04-arm, platform: linux, arch: arm64, targets: 'AppImage deb rpm' }
+          - { os: macos-15-intel, platform: mac, arch: universal, targets: 'dmg pkg zip' }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - if: matrix.arch == 'ia32'
+        run: npm rebuild node-pty
+        env:
+          npm_config_arch: ia32
+          npm_config_build_from_source: 'true'
+      - if: matrix.platform == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm xvfb
+      - run: npm run desktop:build
+        env:
+          OPENMAN_LOCAL_MODE: '1'
+      - id: package
+        run: node scripts/ci-command.mjs npx electron-builder --config electron-builder.yml --${{ matrix.platform }} ${{ matrix.targets }} --${{ matrix.arch }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Packaged runtime and GUI checks (Linux)
+        if: matrix.platform == 'linux'
+        run: node scripts/ci-command.mjs xvfb-run -a node scripts/packaged-runtime-smoke.mjs --arch ${{ matrix.arch }}
+      - name: Packaged runtime and GUI checks (Windows/macOS)
+        if: matrix.platform != 'linux'
+        run: node scripts/ci-command.mjs node scripts/packaged-runtime-smoke.mjs --arch ${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.package.outcome == 'success'
+        with:
+          name: installers-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            release/*.exe
+            release/*.msi
+            release/*.AppImage
+            release/*.deb
+            release/*.rpm
+            release/*.dmg
+            release/*.pkg
+            release/*.zip
+          if-no-files-found: error
+          retention-days: 14
+  mac-arm64-acceptance:
+    needs: installers
+    if: always() && !cancelled() && needs.installers.result != 'skipped'
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - run: npx tsc -p electron/tsconfig.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: installers-mac-universal
+          path: release
+      - name: Extract the produced universal ZIP
+        run: mkdir -p release/mac-universal && ditto -x -k release/*-universal.zip release/mac-universal
+      - name: Verify the universal app on Apple Silicon as well as its Intel builder
+        run: node scripts/ci-command.mjs node scripts/packaged-runtime-smoke.mjs --arch arm64

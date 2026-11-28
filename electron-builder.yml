@@ -1,0 +1,73 @@
+appId: ai.openman.desktop
+productName: OpenMan
+copyright: Copyright © 2026 Organic Intelligence, Inc.
+asar: true
+npmRebuild: false
+afterPack: scripts/desktop-after-pack.cjs
+directories:
+  app: build/desktop
+  output: release
+  buildResources: public/brand
+files:
+  - build/electron/**/*
+  - package.json
+  - "!node_modules/**/*"
+extraResources:
+  - from: .next/standalone
+    to: server
+  # electron-builder intentionally excludes a source root's node_modules; map it explicitly.
+  - from: .next/standalone/node_modules
+    to: server/node_modules
+  - from: public
+    to: public
+artifactName: '${productName}-${version}-${os}-${arch}.${ext}'
+win:
+  icon: public/brand/icon.ico
+  target:
+    - target: nsis
+      arch: [x64, arm64, ia32]
+    - target: msi
+      arch: [x64, arm64, ia32]
+    - target: portable
+      arch: [x64, arm64, ia32]
+nsis:
+  artifactName: '${productName}-${version}-win-${arch}-setup.${ext}'
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+portable:
+  artifactName: '${productName}-${version}-win-${arch}-portable.${ext}'
+msi:
+  oneClick: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+linux:
+  icon: public/brand/icon.png
+  category: Utility
+  maintainer: Organic Intelligence, Inc.
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64, arm64]
+    - target: rpm
+      arch: [x64, arm64]
+mac:
+  icon: public/brand/icon.icns
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  entitlements: electron/entitlements.mac.plist
+  entitlementsInherit: electron/entitlements.mac.plist
+  mergeASARs: true
+  target:
+    - target: dmg
+      arch: [universal]
+    - target: pkg
+      arch: [universal]
+    - target: zip
+      arch: [universal]
+  extendInfo:
+    NSMicrophoneUsageDescription: Record voice notes and transcribe meetings when requested.
+    NSScreenCaptureUsageDescription: Show your desktop in the workspace when requested.
+    NSAppleEventsUsageDescription: Control applications after explicit computer-use permission.
