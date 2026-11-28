@@ -3,8 +3,12 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { request as httpRequest, createServer } from 'node:http';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
+const { values } = parseArgs({ options: { executable: { type: 'string' }, 'server-root': { type: 'string' } } });
+const executable = values.executable ? resolve(values.executable) : process.execPath;
+const serverRoot = resolve(values['server-root'] || '.next/standalone');
 const root = await mkdtemp(join(process.cwd(), '.data-production-test-'));
 const port = Number(process.env.OPENMAN_TEST_PORT || 3087);
 const base = `http://127.0.0.1:${port}`;
@@ -23,8 +27,8 @@ try {
     res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ choices: [{ message }] }));
   });
   await new Promise(r => model.listen(0, '127.0.0.1', r));
-  backend = spawn(process.execPath, ['--require', fileURLToPath(new URL('./offline-network-guard.cjs', import.meta.url)), '.next/standalone/server.js'], { cwd: process.cwd(), env: {
-    ...process.env, NODE_ENV: 'production', HOSTNAME: '127.0.0.1', PORT: String(port), OPENMAN_LOCAL_MODE: defaultMode ? '' : '1', NEXT_PUBLIC_SUPABASE_URL: defaultMode ? '' : 'https://force-local-test.supabase.co',
+  backend = spawn(executable, ['--require', fileURLToPath(new URL('./offline-network-guard.cjs', import.meta.url)), join(serverRoot, 'server.js')], { cwd: serverRoot, env: {
+    ...process.env, ...(values.executable ? { ELECTRON_RUN_AS_NODE: '1' } : {}), NODE_ENV: 'production', HOSTNAME: '127.0.0.1', PORT: String(port), OPENMAN_LOCAL_MODE: defaultMode ? '' : '1', NEXT_PUBLIC_SUPABASE_URL: defaultMode ? '' : 'https://force-local-test.supabase.co',
     OPENMAN_DESKTOP_INSTANCE_TOKEN: 'test-desktop-instance-token', OPENMAN_APP_DATA: root, OPENMAN_WORKSPACE: join(root, 'workspace'), OPENMAN_AGENT_PORT: '18642', OPENMAN_WS_PORT: '18643', OPENMAN_NETWORK_AUDIT: join(root, 'network-attempts'),
   }, stdio: ['ignore', 'pipe', 'pipe'] });
   backend.stdout.on('data', data => { log = (log + data).slice(-20000); }); backend.stderr.on('data', data => { log = (log + data).slice(-20000); });

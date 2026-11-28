@@ -40,7 +40,7 @@ jobs:
           - { os: windows-2022, platform: win, arch: ia32 }
           - { os: ubuntu-24.04, platform: linux, arch: x64 }
           - { os: ubuntu-24.04-arm, platform: linux, arch: arm64 }
-          - { os: macos-14, platform: mac, arch: universal }
+          - { os: macos-15-intel, platform: mac, arch: universal }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -59,10 +59,14 @@ jobs:
       - run: npm run desktop:build
         env:
           OPENMAN_LOCAL_MODE: '1'
-      - run: npx electron-builder --config electron-builder.yml --${{ matrix.platform }} --${{ matrix.arch }} --publish never
+      - id: package
+        run: node scripts/ci-command.mjs npx electron-builder --config electron-builder.yml --${{ matrix.platform }} --${{ matrix.arch }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Packaged runtime regression checks
+        run: node scripts/ci-command.mjs node scripts/packaged-runtime-smoke.mjs --arch ${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
+        if: always() && steps.package.outcome == 'success'
         with:
           name: installers-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
