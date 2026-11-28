@@ -1,5 +1,6 @@
 name: Build desktop installers
 on:
+  pull_request:
   workflow_dispatch:
   push:
     tags: ['v*']
@@ -8,6 +9,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,6 +28,7 @@ jobs:
         env:
           OPENMAN_SMOKE_DEFAULT: '1'
   installers:
+    if: github.event_name != 'pull_request'
     needs: verify
     strategy:
       fail-fast: false
