@@ -25,3 +25,13 @@ await cp('node_modules/node-pty', '.next/standalone/node_modules/node-pty', { re
 // Playwright dynamically reads browsers.json and bundled helpers even with a system browser.
 await cp("node_modules/playwright-core", ".next/standalone/node_modules/playwright-core", { recursive: true });
 await materializeExternalAliases('.next/standalone');
+
+// The Electron main process uses only built-ins; server dependencies belong in extraResources, not app.asar.
+// A separate app manifest keeps builder dependency collection away from the Next development tree.
+await mkdir('build/desktop', { recursive: true });
+await cp('build/electron', 'build/desktop/build/electron', { recursive: true });
+const desktopPkg = { ...pkg };
+delete desktopPkg.dependencies;
+delete desktopPkg.optionalDependencies;
+delete desktopPkg.devDependencies;
+await writeFile('build/desktop/package.json', JSON.stringify(desktopPkg, null, 2) + '\n');
